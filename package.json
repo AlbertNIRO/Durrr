@@ -1,0 +1,12 @@
+{
+  "name": "gelee-brawl",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "3D Ragdoll Physics Party Brawler für iPad, Desktop und Controller",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

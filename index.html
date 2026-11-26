@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Gelee Brawl — 3D Ragdoll Physics Party Brawler</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+        "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Main Menu Overlay -->
+  <div id="ui-layer">
+    <div id="main-menu" class="screen active">
+      <div class="logo-container">
+        <div class="badge">EDITION 1.0 • iPAD & DESKTOP</div>
+        <h1 class="game-title">GELEE <span>BRAWL</span></h1>
+        <p class="subtitle">Physik-basierte Ragdoll-Arena • Lokal & Online Multiplayer</p>
+      </div>
+
+      <div class="menu-grid">
+        <div class="menu-card">
+          <h2>SPIELMODUS</h2>
+          <button class="btn primary" id="btn-play-local">▶ SCHNELLES SPIEL (VS K.I.)</button>
+          <button class="btn secondary" id="btn-open-multiplayer">🌐 ONLINE MULTIPLAYER</button>
+          <button class="btn secondary" id="btn-open-customizer">🎨 GELEE ANPASSEN</button>
+        </div>
+
+        <div class="menu-card">
+          <h2>ARENA WÄHLEN</h2>
+          <div id="map-selector" class="map-grid"></div>
+        </div>
+      </div>
+
+      <div class="controls-bar">
+        <span>🎮 Gamepad bereit</span>
+        <span>📱 iPad Touch-HUD aktiv</span>
+        <span>⌨️ WASD / Maus / Leertaste / F / G</span>
+      </div>
+    </div>
+
+    <!-- Character Customizer Screen -->
+    <div id="customizer-screen" class="screen">
+      <div class="panel glass">
+        <h2>🎨 GELEE KÄMPFER STUDIO</h2>
+        <div class="customizer-layout">
+          <div class="customizer-controls">
+            <label>Kämpfer-Name
+              <input type="text" id="player-name-input" value="Wackel-Max" maxlength="16" />
+            </label>
+
+            <label>Gelee-Farbe
+              <div id="color-swatches" class="swatch-grid"></div>
+            </label>
+
+            <label>Kopfbedeckung
+              <select id="hat-select">
+                <option value="none">Keine</option>
+                <option value="crown">Goldene Krone</option>
+                <option value="tophat">Zylinder</option>
+                <option value="viking">Wikinger-Helm</option>
+                <option value="construction">Bauarbeiter-Helm</option>
+                <option value="headband">Ninja-Stirnband</option>
+              </select>
+            </label>
+
+            <label>Outfit / Oberkörper
+              <select id="outfit-select">
+                <option value="classic">Klassisch Nackt-Gelee</option>
+                <option value="suit">Business-Anzug</option>
+                <option value="wrestler">Luchador-Gürtel</option>
+                <option value="pirate">Piraten-Weste</option>
+              </select>
+            </label>
+
+            <label>K.I. Gegner Anzahl: <span id="bot-count-label">3</span>
+              <input type="range" id="bot-count-slider" min="1" max="5" value="3" />
+            </label>
+          </div>
+          <div class="preview-hint">
+            <p>Drehe die Kamera mit Maus oder Touch, um deinen Gelee-Kämpfer live in der 3D-Vorschau zu betrachten!</p>
+          </div>
+        </div>
+        <div class="panel-actions">
+          <button class="btn primary" id="btn-save-customizer">✔ SPEICHERN & ZURÜCK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multiplayer Lobby Screen -->
+    <div id="multiplayer-screen" class="screen">
+      <div class="panel glass">
+        <h2>🌐 ONLINE MULTIPLAYER LOBBY</h2>
+        <p class="info-text">Verbinde dich mit deinem WebSocket-Server (Standard: <code>ws://localhost:8080</code> oder deine Render/Railway/ngrok URL).</p>
+        <div class="mp-form">
+          <label>Server-URL
+            <input type="text" id="server-url-input" value="ws://localhost:8080" />
+          </label>
+          <label>Raum-Code (z.B. GELEE1)
+            <input type="text" id="room-code-input" value="GELEE1" maxlength="10" />
+          </label>
+          <div class="mp-buttons">
+            <button class="btn primary" id="btn-connect-mp">VERBINDEN & BEITRETEN</button>
+            <button class="btn secondary" id="btn-back-mp">ZURÜCK</button>
+          </div>
+        </div>
+        <div id="mp-status" class="status-box">Status: Getrennt</div>
+        <div id="mp-players-list" class="players-list"></div>
+        <button class="btn primary hidden" id="btn-start-mp-match">🚀 MATCH FÜR ALLE STARTEN</button>
+      </div>
+    </div>
+
+    <!-- In-Game HUD -->
+    <div id="hud" class="hidden">
+      <div class="hud-top">
+        <div class="hud-badge" id="hud-map-name">ARENA</div>
+        <div class="hud-scoreboard" id="hud-scoreboard"></div>
+        <button class="btn small danger" id="btn-exit-match">✕ MENÜ</button>
+      </div>
+
+      <div id="ko-banner" class="ko-banner hidden">K.O.!</div>
+      <div id="round-banner" class="round-banner hidden">RUNDE 1</div>
+
+      <!-- Mobile / iPad Virtual Touch Controls -->
+      <div id="touch-controls">
+        <div id="joystick-zone">
+          <div id="joystick-base">
+            <div id="joystick-stick"></div>
+          </div>
+        </div>
+
+        <div id="action-buttons">
+          <button class="touch-btn punch-l" data-action="punchLeft">✊ L</button>
+          <button class="touch-btn punch-r" data-action="punchRight">✊ R</button>
+          <button class="touch-btn grab" data-action="grab">🧲 GREIFEN</button>
+          <button class="touch-btn jump" data-action="jump">⬆ SPRINGEN</button>
+          <button class="touch-btn headbutt" data-action="headbutt">💥 KOPF</button>
+          <button class="touch-btn lift" data-action="lift">🏋️ HEBEN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
